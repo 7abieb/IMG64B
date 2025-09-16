@@ -19,20 +19,6 @@ A lightweight, fully client-side web application for securely encrypting images 
 - **Error Handling**: Validates inputs, shows success/error messages, and handles invalid passwords gracefully.
 - **Lightweight**: ~5KB minified (plus CDN for CryptoJS). Supports images up to ~10MB.
 
-## 📱 Screenshots
-### Encryption Section
-![Encryption UI](screenshots/encryption.png)
-*(Upload an image, enter password, and get encrypted Base64)*
-
-### Decryption Section
-![Decryption UI](screenshots/decryption.png)
-*(Paste encrypted string, enter password, and view decrypted image)*
-
-### Full App View
-![Full App](screenshots/full-app.png)
-*(Responsive design on desktop and mobile)*
-
-*Note: Add actual screenshots to a `/screenshots` folder in your repo and update the image paths above.*
 
 ## 🛠️ Installation & Setup
 1. **Download**: Clone or download this repo as a ZIP.
