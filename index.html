@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Base64 Encryptor/Decryptor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2a5298;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+
+        .section h2 {
+            color: #2a5298;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        input[type="file"], input[type="password"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        button {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.3);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .flex-row > div {
+            flex: 1;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 600px) {
+            .flex-row {
+                flex-direction: column;
+            }
+            .app {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <h1>🔒 Image Base64 Encryptor/Decryptor</h1>
+        
+        <!-- Encryption Section -->
+        <div class="section">
+            <h2>1. Encrypt Image</h2>
+            <div class="flex-row">
+                <div>
+                    <input type="file" id="imageInput" accept="image/*" />
+                    <img id="originalPreview" class="image-preview" alt="Original Image" />
+                </div>
+                <div>
+                    <input type="password" id="encryptPassword" placeholder="Enter encryption password" />
+                    <button id="encryptBtn" onclick="encryptImage()">Encrypt to Base64</button>
+                    <textarea id="encryptedOutput" placeholder="Encrypted Base64 will appear here..." readonly></textarea>
+                    <div id="encryptStatus"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Decryption Section -->
+        <div class="section">
+            <h2>2. Decrypt Image</h2>
+            <div class="flex-row">
+                <div>
+                    <textarea id="encryptedInput" placeholder="Paste encrypted Base64 string here..."></textarea>
+                    <input type="password" id="decryptPassword" placeholder="Enter decryption password" />
+                    <button id="decryptBtn" onclick="decryptImage()">Decrypt and Show Image</button>
+                </div>
+                <div>
+                    <img id="decryptedPreview" class="image-preview" alt="Decrypted Image" />
+                    <div id="decryptStatus"></div>
+                </div>
+            </div>
+        </div>
+
+        <p style="text-align: center; color: #666; font-size: 0.9em;">
+            <strong>Tip:</strong> Use the same password for encryption and decryption. Images are processed client-side for privacy.
+        </p>
+    </div>
+
+    <script>
+        let originalBase64 = '';
+
+        // Function to show status message
+        function showStatus(elementId, message, type) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+            setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
+        }
+
+        // Encryption Function
+        function encryptImage() {
+            const fileInput = document.getElementById('imageInput');
+            const password = document.getElementById('encryptPassword').value;
+            const output = document.getElementById('encryptedOutput');
+            const status = document.getElementById('encryptStatus');
+
+            if (!fileInput.files[0]) {
+                showStatus('encryptStatus', 'Please select an image file.', 'error');
+                return;
+            }
+
+            if (!password) {
+                showStatus('encryptStatus', 'Please enter a password.', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                originalBase64 = e.target.result; // Full data URL (including prefix)
+                
+                // Extract pure Base64 (remove data:image/...;base64, prefix)
+                const base64 = originalBase64.split(',')[1];
+                
+                // Encrypt using AES
+                const encrypted = CryptoJS.AES.encrypt(base64, password).toString();
+                output.value = encrypted;
+
+                showStatus('encryptStatus', 'Encryption successful! Copy the output above.', 'success');
+            };
+
+            reader.onerror = function() {
+                showStatus('encryptStatus', 'Error reading file.', 'error');
+            };
+
+            reader.readAsDataURL(file); // Read as data URL for Base64
+        }
+
+        // Decryption Function
+        function decryptImage() {
+            const encryptedInput = document.getElementById('encryptedInput').value;
+            const password = document.getElementById('decryptPassword').value;
+            const preview = document.getElementById('decryptedPreview');
+            const status = document.getElementById('decryptStatus');
+
+            if (!encryptedInput) {
+                showStatus('decryptStatus', 'Please paste the encrypted string.', 'error');
+                return;
+            }
+
+            if (!password) {
+                showStatus('decryptStatus', 'Please enter the password.', 'error');
+                return;
+            }
+
+            try {
+                // Decrypt using AES
+                const decryptedBytes = CryptoJS.AES.decrypt(encryptedInput, password);
+                const decryptedBase64 = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+                if (!decryptedBase64) {
+                    throw new Error('Invalid password or corrupted data.');
+                }
+
+                // Reconstruct data URL (assuming original was an image; you can detect MIME if needed)
+                const dataUrl = `data:image/png;base64,${decryptedBase64}`; // Default to PNG; adjust if needed
+                preview.src = dataUrl;
+                preview.style.display = 'block';
+
+                showStatus('decryptStatus', 'Decryption successful! Image displayed below.', 'success');
+            } catch (error) {
+                showStatus('decryptStatus', 'Decryption failed: ' + error.message, 'error');
+                preview.style.display = 'none';
+            }
+        }
+
+        // Preview original image on upload
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('originalPreview').src = e.target.result;
+                    document.getElementById('originalPreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Auto-focus and clear on paste
+        document.getElementById('encryptedInput').addEventListener('input', function() {
+            document.getElementById('decryptedPreview').style.display = 'none';
+            document.getElementById('decryptStatus').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
